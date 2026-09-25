@@ -1,0 +1,571 @@
+{
+  "dataset": "cylinder",
+  "mode": "stratified",
+  "split_path": "artifacts/split_cylinder.json",
+  "n_traj": 92,
+  "T": 3990,
+  "H": 128,
+  "W": 256,
+  "dt": 0.0025,
+  "channel_names": [
+    "u",
+    "v",
+    "pressure"
+  ],
+  "labels": [
+    "Re_bin3",
+    "Re_bin4",
+    "Re_bin4",
+    "Re_bin4",
+    "Re_bin4",
+    "Re_bin4",
+    "Re_bin4",
+    "Re_bin4",
+    "Re_bin4",
+    "Re_bin4",
+    "Re_bin4",
+    "Re_bin4",
+    "Re_bin4",
+    "Re_bin4",
+    "Re_bin4",
+    "Re_bin4",
+    "Re_bin4",
+    "Re_bin4",
+    "Re_bin4",
+    "Re_bin4",
+    "Re_bin0",
+    "Re_bin0",
+    "Re_bin0",
+    "Re_bin0",
+    "Re_bin0",
+    "Re_bin0",
+    "Re_bin0",
+    "Re_bin0",
+    "Re_bin0",
+    "Re_bin0",
+    "Re_bin0",
+    "Re_bin0",
+    "Re_bin0",
+    "Re_bin0",
+    "Re_bin0",
+    "Re_bin0",
+    "Re_bin0",
+    "Re_bin0",
+    "Re_bin0",
+    "Re_bin1",
+    "Re_bin1",
+    "Re_bin1",
+    "Re_bin1",
+    "Re_bin1",
+    "Re_bin1",
+    "Re_bin1",
+    "Re_bin1",
+    "Re_bin1",
+    "Re_bin1",
+    "Re_bin1",
+    "Re_bin1",
+    "Re_bin1",
+    "Re_bin1",
+    "Re_bin1",
+    "Re_bin1",
+    "Re_bin1",
+    "Re_bin1",
+    "Re_bin2",
+    "Re_bin2",
+    "Re_bin2",
+    "Re_bin2",
+    "Re_bin2",
+    "Re_bin2",
+    "Re_bin2",
+    "Re_bin2",
+    "Re_bin2",
+    "Re_bin2",
+    "Re_bin2",
+    "Re_bin2",
+    "Re_bin2",
+    "Re_bin2",
+    "Re_bin2",
+    "Re_bin2",
+    "Re_bin2",
+    "Re_bin2",
+    "Re_bin3",
+    "Re_bin3",
+    "Re_bin3",
+    "Re_bin3",
+    "Re_bin3",
+    "Re_bin3",
+    "Re_bin3",
+    "Re_bin3",
+    "Re_bin3",
+    "Re_bin3",
+    "Re_bin3",
+    "Re_bin3",
+    "Re_bin3",
+    "Re_bin3",
+    "Re_bin3",
+    "Re_bin3",
+    "Re_bin3"
+  ],
+  "trajectories": [
+    {
+      "index": 0,
+      "label": "Re_bin3",
+      "sim_id": "10031.h5"
+    },
+    {
+      "index": 1,
+      "label": "Re_bin4",
+      "sim_id": "10125.h5"
+    },
+    {
+      "index": 2,
+      "label": "Re_bin4",
+      "sim_id": "10218.h5"
+    },
+    {
+      "index": 3,
+      "label": "Re_bin4",
+      "sim_id": "10312.h5"
+    },
+    {
+      "index": 4,
+      "label": "Re_bin4",
+      "sim_id": "10406.h5"
+    },
+    {
+      "index": 5,
+      "label": "Re_bin4",
+      "sim_id": "10500.h5"
+    },
+    {
+      "index": 6,
+      "label": "Re_bin4",
+      "sim_id": "10593.h5"
+    },
+    {
+      "index": 7,
+      "label": "Re_bin4",
+      "sim_id": "10687.h5"
+    },
+    {
+      "index": 8,
+      "label": "Re_bin4",
+      "sim_id": "10781.h5"
+    },
+    {
+      "index": 9,
+      "label": "Re_bin4",
+      "sim_id": "10875.h5"
+    },
+    {
+      "index": 10,
+      "label": "Re_bin4",
+      "sim_id": "10968.h5"
+    },
+    {
+      "index": 11,
+      "label": "Re_bin4",
+      "sim_id": "11062.h5"
+    },
+    {
+      "index": 12,
+      "label": "Re_bin4",
+      "sim_id": "11156.h5"
+    },
+    {
+      "index": 13,
+      "label": "Re_bin4",
+      "sim_id": "11250.h5"
+    },
+    {
+      "index": 14,
+      "label": "Re_bin4",
+      "sim_id": "11343.h5"
+    },
+    {
+      "index": 15,
+      "label": "Re_bin4",
+      "sim_id": "11437.h5"
+    },
+    {
+      "index": 16,
+      "label": "Re_bin4",
+      "sim_id": "11531.h5"
+    },
+    {
+      "index": 17,
+      "label": "Re_bin4",
+      "sim_id": "11625.h5"
+    },
+    {
+      "index": 18,
+      "label": "Re_bin4",
+      "sim_id": "11718.h5"
+    },
+    {
+      "index": 19,
+      "label": "Re_bin4",
+      "sim_id": "11812.h5"
+    },
+    {
+      "index": 20,
+      "label": "Re_bin0",
+      "sim_id": "1781.h5"
+    },
+    {
+      "index": 21,
+      "label": "Re_bin0",
+      "sim_id": "1875.h5"
+    },
+    {
+      "index": 22,
+      "label": "Re_bin0",
+      "sim_id": "2062.h5"
+    },
+    {
+      "index": 23,
+      "label": "Re_bin0",
+      "sim_id": "2156.h5"
+    },
+    {
+      "index": 24,
+      "label": "Re_bin0",
+      "sim_id": "2250.h5"
+    },
+    {
+      "index": 25,
+      "label": "Re_bin0",
+      "sim_id": "2343.h5"
+    },
+    {
+      "index": 26,
+      "label": "Re_bin0",
+      "sim_id": "2437.h5"
+    },
+    {
+      "index": 27,
+      "label": "Re_bin0",
+      "sim_id": "2531.h5"
+    },
+    {
+      "index": 28,
+      "label": "Re_bin0",
+      "sim_id": "2718.h5"
+    },
+    {
+      "index": 29,
+      "label": "Re_bin0",
+      "sim_id": "2812.h5"
+    },
+    {
+      "index": 30,
+      "label": "Re_bin0",
+      "sim_id": "2906.h5"
+    },
+    {
+      "index": 31,
+      "label": "Re_bin0",
+      "sim_id": "3000.h5"
+    },
+    {
+      "index": 32,
+      "label": "Re_bin0",
+      "sim_id": "3093.h5"
+    },
+    {
+      "index": 33,
+      "label": "Re_bin0",
+      "sim_id": "3187.h5"
+    },
+    {
+      "index": 34,
+      "label": "Re_bin0",
+      "sim_id": "3281.h5"
+    },
+    {
+      "index": 35,
+      "label": "Re_bin0",
+      "sim_id": "3375.h5"
+    },
+    {
+      "index": 36,
+      "label": "Re_bin0",
+      "sim_id": "3468.h5"
+    },
+    {
+      "index": 37,
+      "label": "Re_bin0",
+      "sim_id": "3656.h5"
+    },
+    {
+      "index": 38,
+      "label": "Re_bin0",
+      "sim_id": "3843.h5"
+    },
+    {
+      "index": 39,
+      "label": "Re_bin1",
+      "sim_id": "3937.h5"
+    },
+    {
+      "index": 40,
+      "label": "Re_bin1",
+      "sim_id": "4031.h5"
+    },
+    {
+      "index": 41,
+      "label": "Re_bin1",
+      "sim_id": "4125.h5"
+    },
+    {
+      "index": 42,
+      "label": "Re_bin1",
+      "sim_id": "4218.h5"
+    },
+    {
+      "index": 43,
+      "label": "Re_bin1",
+      "sim_id": "4312.h5"
+    },
+    {
+      "index": 44,
+      "label": "Re_bin1",
+      "sim_id": "4406.h5"
+    },
+    {
+      "index": 45,
+      "label": "Re_bin1",
+      "sim_id": "4500.h5"
+    },
+    {
+      "index": 46,
+      "label": "Re_bin1",
+      "sim_id": "4593.h5"
+    },
+    {
+      "index": 47,
+      "label": "Re_bin1",
+      "sim_id": "4687.h5"
+    },
+    {
+      "index": 48,
+      "label": "Re_bin1",
+      "sim_id": "4781.h5"
+    },
+    {
+      "index": 49,
+      "label": "Re_bin1",
+      "sim_id": "4875.h5"
+    },
+    {
+      "index": 50,
+      "label": "Re_bin1",
+      "sim_id": "4968.h5"
+    },
+    {
+      "index": 51,
+      "label": "Re_bin1",
+      "sim_id": "5062.h5"
+    },
+    {
+      "index": 52,
+      "label": "Re_bin1",
+      "sim_id": "5156.h5"
+    },
+    {
+      "index": 53,
+      "label": "Re_bin1",
+      "sim_id": "5250.h5"
+    },
+    {
+      "index": 54,
+      "label": "Re_bin1",
+      "sim_id": "5343.h5"
+    },
+    {
+      "index": 55,
+      "label": "Re_bin1",
+      "sim_id": "5531.h5"
+    },
+    {
+      "index": 56,
+      "label": "Re_bin1",
+      "sim_id": "5625.h5"
+    },
+    {
+      "index": 57,
+      "label": "Re_bin2",
+      "sim_id": "5718.h5"
+    },
+    {
+      "index": 58,
+      "label": "Re_bin2",
+      "sim_id": "5906.h5"
+    },
+    {
+      "index": 59,
+      "label": "Re_bin2",
+      "sim_id": "6000.h5"
+    },
+    {
+      "index": 60,
+      "label": "Re_bin2",
+      "sim_id": "6093.h5"
+    },
+    {
+      "index": 61,
+      "label": "Re_bin2",
+      "sim_id": "6187.h5"
+    },
+    {
+      "index": 62,
+      "label": "Re_bin2",
+      "sim_id": "6562.h5"
+    },
+    {
+      "index": 63,
+      "label": "Re_bin2",
+      "sim_id": "6656.h5"
+    },
+    {
+      "index": 64,
+      "label": "Re_bin2",
+      "sim_id": "6843.h5"
+    },
+    {
+      "index": 65,
+      "label": "Re_bin2",
+      "sim_id": "7031.h5"
+    },
+    {
+      "index": 66,
+      "label": "Re_bin2",
+      "sim_id": "7125.h5"
+    },
+    {
+      "index": 67,
+      "label": "Re_bin2",
+      "sim_id": "7218.h5"
+    },
+    {
+      "index": 68,
+      "label": "Re_bin2",
+      "sim_id": "7406.h5"
+    },
+    {
+      "index": 69,
+      "label": "Re_bin2",
+      "sim_id": "7500.h5"
+    },
+    {
+      "index": 70,
+      "label": "Re_bin2",
+      "sim_id": "7781.h5"
+    },
+    {
+      "index": 71,
+      "label": "Re_bin2",
+      "sim_id": "7875.h5"
+    },
+    {
+      "index": 72,
+      "label": "Re_bin2",
+      "sim_id": "8062.h5"
+    },
+    {
+      "index": 73,
+      "label": "Re_bin2",
+      "sim_id": "8156.h5"
+    },
+    {
+      "index": 74,
+      "label": "Re_bin2",
+      "sim_id": "8250.h5"
+    },
+    {
+      "index": 75,
+      "label": "Re_bin3",
+      "sim_id": "8343.h5"
+    },
+    {
+      "index": 76,
+      "label": "Re_bin3",
+      "sim_id": "8437.h5"
+    },
+    {
+      "index": 77,
+      "label": "Re_bin3",
+      "sim_id": "8531.h5"
+    },
+    {
+      "index": 78,
+      "label": "Re_bin3",
+      "sim_id": "8625.h5"
+    },
+    {
+      "index": 79,
+      "label": "Re_bin3",
+      "sim_id": "8718.h5"
+    },
+    {
+      "index": 80,
+      "label": "Re_bin3",
+      "sim_id": "8812.h5"
+    },
+    {
+      "index": 81,
+      "label": "Re_bin3",
+      "sim_id": "8906.h5"
+    },
+    {
+      "index": 82,
+      "label": "Re_bin3",
+      "sim_id": "9000.h5"
+    },
+    {
+      "index": 83,
+      "label": "Re_bin3",
+      "sim_id": "9093.h5"
+    },
+    {
+      "index": 84,
+      "label": "Re_bin3",
+      "sim_id": "9187.h5"
+    },
+    {
+      "index": 85,
+      "label": "Re_bin3",
+      "sim_id": "9281.h5"
+    },
+    {
+      "index": 86,
+      "label": "Re_bin3",
+      "sim_id": "9375.h5"
+    },
+    {
+      "index": 87,
+      "label": "Re_bin3",
+      "sim_id": "9468.h5"
+    },
+    {
+      "index": 88,
+      "label": "Re_bin3",
+      "sim_id": "9562.h5"
+    },
+    {
+      "index": 89,
+      "label": "Re_bin3",
+      "sim_id": "9656.h5"
+    },
+    {
+      "index": 90,
+      "label": "Re_bin3",
+      "sim_id": "9843.h5"
+    },
+    {
+      "index": 91,
+      "label": "Re_bin3",
+      "sim_id": "9937.h5"
+    }
+  ]
+}
