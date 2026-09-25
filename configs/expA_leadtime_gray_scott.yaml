@@ -1,0 +1,66 @@
+# ==========================================================================
+# Experiment A — RQ3/RQ4, unseen lead time, on Gray-Scott.
+#
+# THE CLAIM UNDER TEST
+#   G(X_t, dT) is a lead-time-conditioned operator, not a bank of discrete
+#   forecasting heads that happened to be trained at a few horizons. The test:
+#   train on a SPARSE horizon set, then score horizons that were never trained.
+#   A conditioned operator traces the E(h) curve smoothly through them; a
+#   lookup table steps between its anchors.
+#
+# WHY THIS IS WORTH RE-RUNNING HERE RATHER THAN CITING THE COMBUSTION RESULT
+#   configs/expB_dt_fno.yaml records why the original grid could not answer the
+#   question on RealPDEBench: the trajectory-climatology oracle scores a flat
+#   0.455 at every horizon and DT-FNO is above it from h = 4 onward, so past
+#   h ~ 4 "there is no horizon-dependent signal left to interpolate: every
+#   model, right or wrong, sits near one horizon-independent field.
+#   Interpolation points at h = 24, 48, 96 would compare flat lines to flat
+#   lines."
+#
+#   That is a property of the dataset, not of the method. Gray-Scott is
+#   autonomous, 1001 frames long, and (once stationary trajectories are
+#   excluded) keeps evolving; if its discriminative range extends to h ~ 100+,
+#   this experiment finally has room to run. scripts/probe_timescales.py tells
+#   you the range BEFORE you train. Move the interpolation points into it.
+#
+# GRID
+#   trained      1, 4, 16, 64, 128           sparse on purpose: wide gaps are
+#                                            what create meaningful unseen
+#                                            query times
+#   interpolated 2, 3, 6, 8, 10, 12, 24, 32, 48, 96    never trained
+#   extrapolated 160, 192, 256, 384, 512     beyond h_max_train; A5 measured
+#                                            that models do NOT extrapolate
+#                                            past their training range, so this
+#                                            column is a measurement of that
+#                                            failure, not a hoped-for success
+#
+# Run BOTH time embeddings. §13.1's aliasing caveat makes the extrapolation
+# column uninterpretable otherwise, and Experiment B on RealPDEBench found the
+# ranking between them REVERSES under dense horizon sampling (roughness 0.228
+# Fourier vs 0.067 log-Fourier; worst unseen horizon 0.939 vs 0.626). A third
+# dataset is what turns that from an anomaly into a finding.
+# ==========================================================================
+
+_base_: gray_scott.yaml
+
+meta:
+  model_name: dt_fno
+  model_variant: dt_fno
+
+data:
+  horizon_sampling: explicit
+  train_horizons: [1, 4, 16, 64, 128]
+  h_max_train: 128
+  eval_horizons: [1, 2, 3, 4, 6, 8, 10, 12, 16, 24, 32, 48, 64, 96, 128,
+                  160, 192, 256, 384, 512]
+  val_horizons: [1, 4, 16, 64]
+  eval_stride: 25
+
+training:
+  use_semigroup: false
+  use_identity: false
+
+experiment:
+  exp_name: gs_leadtime_dt_fno
+  save_dir: ./checkpoints/gs_leadtime_dt_fno
+  tb_dir: ./runs/gs_leadtime_dt_fno

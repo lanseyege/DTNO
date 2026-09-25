@@ -1,0 +1,24 @@
+# SG-DT-FNO (Model C, §3) — architecturally IDENTICAL to dt_fno.yaml.
+#
+# The only differences below are two loss terms.  That is what makes §3's
+# question answerable: any gap is the semigroup inductive bias, not the
+# architecture.  Watch C_SG and E_test together (§31) — consistency alone,
+# with flat forecasting error, is Negative Result B, not a result.
+_base_: base.yaml
+
+meta:
+  model_variant: sg_dt_fno
+  model_name: sg_dt_fno
+
+training:
+  use_semigroup: true
+  use_identity: true
+  lambda_sg: 0.1                # §19: 0 during warm-up, ramp into [0.05, 0.2]
+  sg_warmup_epochs: 5
+  sg_ramp_epochs: 10
+  lambda_id: 0.05
+
+experiment:
+  exp_name: sg_dt_fno
+  save_dir: ./checkpoints/sg_dt_fno
+  tb_dir: ./runs/sg_dt_fno

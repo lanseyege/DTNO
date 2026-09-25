@@ -1,0 +1,47 @@
+# Phase 5 (§41) — REALM IgnitHIT cross-dataset verification.
+#
+# The architecture and training protocol are NOT re-tuned.  Only channel count,
+# data loader and horizon range move (§41); everything else is inherited so a
+# reproduced trend means something.
+#
+# 36 trajectories x 30 timesteps, 12 variables.  With K = 4 and h up to 20 the
+# anchor budget is tiny, hence eval_stride: 1.
+_base_: base.yaml
+
+meta:
+  dataset_name: realm_ignithit
+  model_name: sg_dt_fno
+
+data:
+  backend: npy
+  data_path: /path/to/realm_ignithit_npy      # see scripts/convert_realm.py
+  dt: 1.0e-6                                  # set from the REALM metadata
+  channels: null
+  history_len: 4
+
+  split_path: artifacts/split_realm_ignithit.json
+  norm_stats_path: artifacts/norm_stats_realm_ignithit.json
+  n_val_traj: 6
+  n_test_traj: 6
+
+  horizon_sampling: log_binned
+  h_max_train: 12
+  horizon_bins: [[1, 2], [3, 4], [5, 8], [9, 12]]
+  eval_horizons: [1, 2, 3, 4, 6, 8, 10, 12, 14, 16, 20]
+  val_horizons: [1, 4, 8, 12]
+  eval_stride: 1
+  hval_stride: 1
+
+  samples_per_epoch: 8000
+  val_samples: 1000
+  batch_size: 8
+
+training:
+  max_epochs: 200
+  use_semigroup: true
+  use_identity: true
+
+experiment:
+  exp_name: realm_sg_dt_fno
+  save_dir: ./checkpoints/realm_sg_dt_fno
+  tb_dir: ./runs/realm_sg_dt_fno

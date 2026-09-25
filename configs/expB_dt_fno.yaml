@@ -1,0 +1,37 @@
+# Experiment B (§21) — unseen query-time generalization, DT-FNO arm.
+#
+# Trains on H_train = {1,2,4,8,16,32,64,128} ONLY.  Every horizon in
+# H_interp = {3,6,12,24,48,96} is then genuinely unseen, which is the cleanest
+# available evidence that the model learned query-time conditioned dynamics
+# rather than memorising frame indices.
+#
+# Read the extrapolation column (h > 128) with §13.1's caveat in mind: the
+# default Fourier embedding is periodic in tau, so at tau = 3 it aliases onto
+# training values.  Run the twin config with time_embed_mode=fourier_log to
+# separate "the operator cannot extrapolate" from "the embedding aliased":
+#     python scripts/train.py --config configs/expB_dt_fno.yaml \
+#         --set model.time_embed_mode=fourier_log \
+#         --set experiment.exp_name=expB_dt_fno_log
+_base_: base.yaml
+
+meta:
+  model_name: dt_fno
+
+data:
+  horizon_sampling: explicit
+  train_horizons: [1, 4, 16, 64, 128] #[1, 2, 4, 8, 16, 32, 64, 128]
+  h_max_train: 128
+  # interpolation targets + extrapolation targets, plus the training set for
+  # reference; the eval script tags each horizon by regime.
+  eval_horizons: [1, 2, 3, 4, 6, 8, 10, 12, 16, 24, 32, 48, 64, 96, 128, 160, 192, 256] #[1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128, 160, 192, 256, 384]
+  val_horizons: [1, 4, 16, 64] #[1, 8, 64, 128]
+  eval_stride: 40
+
+training:
+  use_semigroup: false
+  use_identity: false
+
+experiment:
+  exp_name: expB_dt_fno
+  save_dir: ./checkpoints/expB_dt_fno
+  tb_dir: ./runs/expB_dt_fno

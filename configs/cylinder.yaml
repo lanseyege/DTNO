@@ -1,0 +1,165 @@
+# ==========================================================================
+# Experiment A2 — RealPDEBench Cylinder (numerical branch).
+#
+#   92 trajectories, 3990 frames, dt = 2.5e-3 s (400 Hz PIV for 20 s)
+#   128 x 256 ON DISK, channels u, v, p ; Reynolds 1800-12000, D = 30 mm
+#
+# RESOLUTION -- READ THIS, IT IS NOT WHAT THE DATASET PAGE SAYS
+# The RealPDEBench page lists "Resolution (sim) 64 x 128". That is the
+# resolution their BENCHMARK trains at, after `sub_s_numerical = 2`. The Arrow
+# blobs are 128 x 256. Measured, not assumed:
+#     scripts/bench_io.py --config configs/cylinder.yaml
+# prints the grid the store actually returns. Believe that line over any
+# documentation, including these comments.
+#
+# Consequences of the native grid, all of which this config now accounts for:
+#   * 1.92 MB per (K+1)-frame sample, 39 GB read per epoch
+#   * 113 GB working set for 72 training trajectories -- fits page cache on a
+#     large-memory node, does not on a small one
+#   * modes 16 x 32 on a 128 x 256 grid is 1/4 of Nyquist on BOTH axes, the
+#     same fraction as RealPDEBench combustion's 16 x 16 on 128 x 128. The
+#     model capacity is therefore matched across the two, which is what the
+#     cross-dataset comparison needs. Do not "fix" the modes to 32 x 64.
+#
+# To match the official benchmark resolution instead, set `spatial_sub: 2`
+# below. That is a different experiment: it needs its own split, its own
+# normalisation statistics and its own checkpoints, and it cannot be resumed
+# into an existing run.
+#
+# Role in the ladder: ISOLATE NONLINEAR FLUID TRANSPORT. A canonical wake with
+# vortex shedding, no chemistry, no buoyancy. Same benchmark family and the
+# same window-slicing machinery as the combustion set, and the same
+# generalization axis (Reynolds number) as Lifted H2.
+#
+# THE REASON THIS DATASET IS THE MOST VALUABLE ADDITION
+# ----------------------------------------------------
+# §8 of the handover: "What is actually missing is a chaotic flow sampled
+# finely enough that h = 32-128 sits inside the predictable window." Both
+# current datasets fail that in opposite ways -- RealPDEBench combustion has
+# T_pred = 4-6 frames, and Lifted H2's whole 181-frame record is shorter than
+# that horizon. Cylinder has 3990 frames of a quasi-periodic flow, so the
+# shedding period plausibly spans tens to hundreds of frames.
+#
+# That is a HYPOTHESIS. Test it before spending GPU time:
+#
+#     python scripts/probe_timescales.py --config configs/cylinder.yaml
+#
+# If E_pers(h) crosses 0.3 well past h = 128, extend eval_horizons to 1024
+# (3990 frames support it), raise h_max_train, and this becomes the dataset on
+# which the headline claim carries no climatology caveat. If it does not, that
+# is a result too, and a bigger one: the horizon ceiling would then be a
+# property of the models rather than of combustion.
+#
+# ORDER OF OPERATIONS
+#   1  python scripts/probe_timescales.py --config configs/cylinder.yaml
+#   2  python scripts/prepare_split.py    --config configs/cylinder.yaml
+#   3  python scripts/audit_data.py       --config configs/cylinder.yaml
+#   4  train
+# ==========================================================================
+
+_base_: base.yaml
+
+meta:
+  dataset_name: cylinder
+  model_name: dt_fno
+
+data:
+  backend: arrow
+  data_path: /mnt/sdb/yuanye/datasets/realpdebench/cylinder/hf_dataset/numerical
+  dt: 2.5e-3                     # 400 Hz; cross-checked against the `t` column
+
+  # `vo` (vorticity) is a function of u and v -- exactly the case the audit's
+  # redundancy check [2b] exists to catch, and the same call base.yaml makes
+  # about Velocity_Magnitude. Add it here only after reading that output.
+  arrow_fields: [u, v, p]
+  # `p` alone matches no pattern in data/channels.py and would land in the
+  # `thermo` fallback, silently disabling the §26 per-variable reporting.
+  # Renaming is the intended fix; check the grouping the audit prints.
+  all_channel_names: [u, v, pressure]
+  channels: null
+  channel_transforms:
+    u: zscore
+    v: zscore
+    pressure: zscore
+
+  # 1 = native 128 x 256. Set 2 to reproduce RealPDEBench's own protocol
+  # (their `sub_s_numerical`), which decimates to 64 x 128 with no
+  # anti-aliasing filter -- same as ours, so the comparison is fair, but say
+  # in the paper that it is decimation and not a low-pass.
+  # Note this reduces collate, host-to-device transfer and GPU compute by 4x,
+  # but NOT the mmap page traffic: a strided read still touches every page.
+  spatial_sub: 1
+  sim_id_regex: "^(\\d+)"        # "10031.h5" -> Re = 10031
+
+  history_len: 4
+  t_scale: null
+
+  # THE SPLIT IS NOT THE OFFICIAL ONE, ON PURPOSE.
+  # RealPDEBench's {train,val,test}_index_numerical.json index (sim_id, time_id)
+  # WINDOWS: all 92 trajectories appear in train, and 43 of them also appear in
+  # val and in test. The (sim_id, time_id) pairs are disjoint, so there is no
+  # literal duplicate -- but windows 20 frames apart in one trajectory are
+  # near-duplicates, which is the leak data/splits.py was written to prevent:
+  #
+  #   "Splitting windows at random puts near-duplicates on both sides of the
+  #    wall and every model looks excellent."
+  #
+  # scripts/prepare_split.py builds a trajectory-held-out split stratified over
+  # Reynolds-number quantile bins. The official protocol can be reported as a
+  # comparability row (--mode within_trajectory is the honest analogue), never
+  # as the headline: the two are not comparable and the official one flatters.
+  #
+  # Two further reasons our numbers are not RealPDEBench-leaderboard numbers:
+  # their loader trains at 32 x 64 (sub_s_numerical = 2) and zeroes the
+  # pressure channel with probability 0.5 (mask_prob). We do neither.
+  split_path: artifacts/split_cylinder.json
+  norm_stats_path: artifacts/norm_stats_cylinder.json
+  n_val_traj: 10
+  n_test_traj: 10
+  split_seed: 42
+
+  # Matched to RealPDEBench combustion so that h_max_train is not a confound in
+  # the cross-dataset comparison. If the probe says the predictable window runs
+  # much longer, run the h_max_train = 512 arm as a SEPARATE experiment rather
+  # than changing this (A5 measured that models do not extrapolate past their
+  # training range, so the two arms answer different questions).
+  horizon_sampling: log_binned
+  h_max_train: 128
+  horizon_bins: [[1, 2], [3, 4], [5, 8], [9, 16], [17, 32], [33, 64], [65, 128]]
+  eval_horizons: [1, 2, 4, 8, 16, 32, 64, 128, 160, 192, 256, 384, 512]
+  val_horizons: [1, 4, 16, 64, 128]
+  eval_stride: 100               # 10 test traj x ~34 anchors = ~340
+  hval_stride: 400
+  climatology_stride: 20
+
+  samples_per_epoch: 20000
+  val_samples: 2000
+  batch_size: 64
+  batch_size_eval: 64
+  num_workers: 6
+
+  expect_shape: [92, 3990, 128, 256, 3]   # measured, see the header
+
+model:
+  # 128 x 256: Nyquist is 64 and 128, so 16 x 32 keeps 1/4 of the resolvable
+  # bandwidth on each axis -- the same fraction RealPDEBench combustion uses
+  # (16 x 16 on 128 x 128). Matched capacity is what makes the cross-dataset
+  # comparison mean something, so this is deliberate, not a leftover from an
+  # earlier guess about the grid.
+  modes1: 16
+  modes2: 32
+  width: 64
+  n_layers: 4
+  padding: 8                     # inlet / outlet / walls: non-periodic
+  padding_mode: replicate
+
+training:
+  max_epochs: 100
+  use_semigroup: false
+  use_identity: false
+
+experiment:
+  exp_name: cyl_dt_fno
+  save_dir: ./checkpoints/cyl_dt_fno
+  tb_dir: ./runs/cyl_dt_fno
+  results_dir: ./results

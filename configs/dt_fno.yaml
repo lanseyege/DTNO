@@ -1,0 +1,18 @@
+# DT-FNO (Model B, §3) — direct-time operator, no semigroup constraint.
+#
+# The Phase 2 decision point: if this does not train, or if E_DT(h) collapses
+# by h = 4-8, the answer to H1 is no and §44's Negative Result A applies.
+_base_: base.yaml
+
+meta:
+  model_variant: dt_fno
+  model_name: dt_fno
+
+training:
+  use_semigroup: false
+  use_identity: false           # Model B is the clean control (§3)
+
+experiment:
+  exp_name: dt_fno
+  save_dir: ./checkpoints/dt_fno
+  tb_dir: ./runs/dt_fno

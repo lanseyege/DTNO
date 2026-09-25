@@ -1,0 +1,26 @@
+# AR-FNO-1 (Model A, §23) — standard one-step autoregressive baseline.
+#
+# This is the WEAK arm on purpose: it never sees its own output as input, so
+# rollout error compounds.  Train ar_fno_r.yaml as well; a direct-time win over
+# this config alone will not survive review (§23).
+_base_: base.yaml
+
+meta:
+  model_variant: ar_fno
+  model_name: ar_fno
+
+data:
+  ar_rollout: 1
+  ar_random_rollout: false
+  # The AR training distribution is h = 1 by construction.  It is still
+  # EVALUATED on the full eval_horizons grid from base.yaml, by rollout.
+  horizon_sampling: fixed
+  fixed_horizon: 1
+
+training:
+  ar_step_weights: uniform
+
+experiment:
+  exp_name: ar_fno_1
+  save_dir: ./checkpoints/ar_fno_1
+  tb_dir: ./runs/ar_fno_1

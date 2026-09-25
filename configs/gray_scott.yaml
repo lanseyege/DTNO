@@ -1,0 +1,123 @@
+# ==========================================================================
+# Experiment A1 — The Well, Gray-Scott reaction-diffusion.
+#
+#   1001 frames, 128 x 128, 2 species, periodic, uniform grid
+#   6 parameter sets (gliders / bubbles / maze / worms / spirals / spots)
+#     x 200 initial conditions = 1200 trajectories
+#   stored every 10 s of simulation time, t in [0, 10000]
+#
+# Role in the ladder: ISOLATE REACTION DYNAMICS. Autonomous, no advection, no
+# forcing, no absolute-time dependence -- the cleanest semigroup testbed in the
+# study. See the docstring of data/gray_scott.py for why that matters and for
+# the two traps this config guards against.
+#
+# ORDER OF OPERATIONS (each step invalidates the next if skipped)
+#   1  python scripts/probe_timescales.py  --config configs/gray_scott.yaml
+#   2  python scripts/screen_stationary.py --config configs/gray_scott.yaml
+#   3  set `exclude_trajectories` below to the JSON step 2 wrote
+#   4  python scripts/prepare_split.py     --config configs/gray_scott.yaml
+#   5  python scripts/audit_data.py        --config configs/gray_scott.yaml
+#   6  train
+# ==========================================================================
+
+_base_: base.yaml
+
+meta:
+  dataset_name: gray_scott
+  model_name: dt_fno
+
+data:
+  backend: well
+  data_path: /mnt/sdb/yuanye/datasets/the_well/gray_scott_reaction_diffusion
+  file_pattern: "*.hdf5"
+  # The store globs <root>/{train,valid,test}/ and <root>/data/{train,valid,test}/,
+  # so both of The Well's shipped layouts resolve without editing this path.
+
+  # dt comes from /dimensions/time. It should print as 10 (seconds); if it does
+  # not, stop -- every "T_pred in seconds" number downstream depends on it.
+  dt: null
+
+  # A one-letter channel name is not something the data/channels.py regexes
+  # should be taught to interpret. Renaming makes `_SPECIES` fire on
+  # "concentration" and puts both species in the `chemistry` group, which is
+  # what makes the §26 per-variable table meaningful here. Verify against the
+  # grouping the audit prints -- that check is §9 of the handover.
+  channel_rename:
+    A: concentration_A
+    B: concentration_B
+
+  channels: null                 # both species
+
+  # Overrides the name-based heuristic, which would pick `log` for anything
+  # matching `concentration`. Wrong here: B is exactly 0 over most of the
+  # domain in several pattern regimes, and A is O(1) throughout. Neither spans
+  # decades, so z-score is both correct and the least surprising choice.
+  # (base.yaml's 13 combustion entries are merged in and simply never looked
+  # up -- the audit only queries the channels actually selected.)
+  channel_transforms:
+    concentration_A: zscore
+    concentration_B: zscore
+
+  # Set this to the JSON written by scripts/screen_stationary.py. Leaving it
+  # null trains on trajectories that reach a fixed point at ~12% of the record
+  # and are then ~87% frames on which persistence is exact -- which biases
+  # E(h), the climatology baselines and the AR-versus-direct crossover, all in
+  # the flattering direction. See data/gray_scott.py, TRAP 1.
+  exclude_trajectories: null
+  #exclude_trajectories: artifacts/stationary_gray_scott.json
+
+  history_len: 4
+  t_scale: null
+
+  split_path: artifacts/split_gray_scott.json
+  norm_stats_path: artifacts/norm_stats_gray_scott.json
+  # 1200 realizations is far more than samples_per_epoch will ever touch; the
+  # cap keeps the audit and the climatology fits affordable without changing
+  # what the model sees. prepare_split.py balances the cap over the six
+  # pattern types.
+  n_val_traj: 8
+  n_test_traj: 12
+  split_seed: 42
+
+  # Same grid as RealPDEBench combustion, deliberately: h is then comparable
+  # across datasets without a per-dataset rescaling in every figure caption.
+  horizon_sampling: log_binned
+  h_max_train: 128
+  horizon_bins: [[1, 2], [3, 4], [5, 8], [9, 16], [17, 32], [33, 64], [65, 128]]
+  eval_horizons: [1, 2, 4, 8, 16, 32, 64, 128, 160, 192, 256, 384, 512]
+  val_horizons: [1, 4, 16, 64, 128]
+  eval_stride: 25
+  hval_stride: 100
+  climatology_stride: 10
+
+  samples_per_epoch: 20000
+  val_samples: 2000
+  batch_size: 8
+  batch_size_eval: 8
+  num_workers: 6
+
+  expect_shape: null             # filled in by the audit's [1] line
+
+model:
+  # PERIODIC DOMAIN. The §15 replicate padding exists for the non-periodic
+  # burner; here it would break the exact periodicity the FNO's FFT already
+  # assumes, and cost 8 rows and columns of wasted compute per layer.
+  # This is the one architectural setting that legitimately differs between
+  # datasets, and it differs identically for all three models, so it cannot
+  # confound the AR-versus-direct comparison.
+  padding: 0
+  modes1: 16
+  modes2: 16
+  width: 64
+  n_layers: 4
+
+training:
+  max_epochs: 100
+  use_semigroup: false
+  use_identity: false
+
+experiment:
+  exp_name: gs_dt_fno
+  save_dir: ./checkpoints/gs_dt_fno
+  tb_dir: ./runs/gs_dt_fno
+  results_dir: ./results

@@ -1,0 +1,161 @@
+# ==========================================================================
+# Experiment A3 — The Well, Rayleigh-Benard convection.
+#
+#   200 frames, 512 x 128, 4 channels (buoyancy, pressure, velocity_x/_y)
+#   1750 simulations = 35 (Rayleigh, Prandtl) settings x 50 initial conditions
+#   horizontally periodic; no-slip walls top and bottom
+#
+# Role in the ladder: ISOLATE THERMAL CONVECTION. Buoyancy-driven transport
+# with a temperature-analogue and a pressure field, no chemistry. It is the
+# closest non-reacting analogue of what the combustion datasets do, which makes
+# it the bridge between Experiment A and Experiment B.
+#
+# ORDER OF OPERATIONS
+#   1  python scripts/probe_timescales.py --config configs/rayleigh_benard.yaml
+#   2  python scripts/prepare_split.py    --config configs/rayleigh_benard.yaml
+#   3  python scripts/audit_data.py       --config configs/rayleigh_benard.yaml
+#   4  train
+#
+# READ THIS BEFORE QUOTING ANY SPECTRAL NUMBER
+# --------------------------------------------
+# The Well's `rayleigh_benard` is sampled at CHEBYSHEV NODES along the vertical
+# axis; `rayleigh_benard_uniform` is the same data resampled onto a uniform
+# grid. The FNO's FFT and the §27 spectral metric both assume uniform spacing.
+# On the Chebyshev grid E_field is still exact -- it is a pointwise error on the
+# points the data has -- but the VERTICAL wavenumber axis of E_spec is not a
+# physical wavenumber axis and Figure 7's claim cannot be made along z.
+#
+# If you can download it, point data_path at rayleigh_benard_uniform and delete
+# this note. If you cannot, keep `spectral_axes_note` set and put it in the
+# caption. This config does NOT silently resample: an interpolation inserted
+# below the normalisation statistics would change every number in the paper and
+# leave no trace in the results JSON.
+# ==========================================================================
+
+_base_: base.yaml
+
+meta:
+  dataset_name: rayleigh_benard
+  model_name: dt_fno
+
+data:
+  backend: well
+  data_path: /mnt/sdb/yuanye/datasets/the_well/rayleigh_benard
+  file_pattern: "*.hdf5"
+  dt: null                       # from /dimensions/time
+
+  # 512 x 128 -> 128 x 128 by taking every 4th point along the periodic
+  # horizontal axis and keeping the vertical axis native. 512 = 4 x 128
+  # exactly, so striding a uniform periodic axis preserves periodicity; it is a
+  # low-pass filter and nothing more. The reason to do it is that the grid then
+  # matches Gray-Scott and RealPDEBench, so RESOLUTION is not a second
+  # uncontrolled difference between datasets.
+  #
+  # For a claim about small horizontal scales, re-run at native resolution:
+  #   --set data.spatial_stride=1 --set data.spatial_crop=null \
+  #   --set model.modes2=32
+  spatial_crop: [128, 128]
+  spatial_stride: [4, 1]
+
+  # ##### THE FIRST RUN OF THIS DATASET FAILED HERE. READ BEFORE TRAINING. ####
+  #
+  # Files start from a perturbed conductive state at REST, so velocity and
+  # pressure are ~0 over the opening frames. E_field is a RELATIVE error,
+  # ||pred - target|| / ||target||, so a target with ~zero normalised norm
+  # sends it to infinity no matter how good the prediction is.
+  #
+  # With traj_cut = 0 the first run reported E_field(h=1) = 13.7 for AR, 23.2
+  # for DT and 437 for the CLIMATOLOGY -- and a climatology cannot diverge,
+  # which is the tell that the metric broke rather than the models. The
+  # buoyancy channel alone was healthy the whole time: 0.12 at h=1 rising
+  # smoothly to 1.36 at h=128, a completely publishable curve hidden inside a
+  # channel-averaged number that one near-zero denominator had destroyed.
+  #
+  # Two things caused it and BOTH must be fixed:
+  #   1. traj_cut = 0 kept the spin-up.
+  #   2. T = 200 with h_max = 128 puts every anchor in t0 in [3, 71) -- the
+  #      evaluation only ever looked at the first third of the record, which
+  #      is exactly the transient. Cutting the head without also lowering
+  #      h_max just moves the anchors into the head of what remains.
+  #
+  # Measure it, do not guess:
+  #     python scripts/probe_timescales.py --config configs/rayleigh_benard.yaml
+  # prints [2b] FIELD AMPLITUDE vs TIME and names the traj_cut to use.
+  traj_cut: 52
+  frame_stride: 1
+
+  # (Rayleigh, Prandtl) are read from /scalars and become the split
+  # coordinates. prepare_split.py buckets Rayleigh on log10 before using it as
+  # a stratification label -- it spans orders of magnitude, and without the
+  # bucketing every file becomes its own stratum and stratification degenerates
+  # into a shuffle.
+  param_scalars: [Rayleigh, Prandtl]
+
+  channels: null                 # buoyancy, pressure, velocity_x, velocity_y
+  channel_transforms:
+    buoyancy: zscore
+    pressure: zscore
+    velocity_x: zscore
+    velocity_y: zscore
+
+  history_len: 4
+  t_scale: null
+
+  split_path: artifacts/split_rayleigh_benard.json
+  norm_stats_path: artifacts/norm_stats_rayleigh_benard.json
+  n_val_traj: 8
+  n_test_traj: 16
+  split_seed: 42
+
+  # ANCHOR BUDGET. T = 200, K = 4, and every horizon shares one anchor set (§8),
+  # so the longest horizon sets how many anchors exist:
+  #     h_max = 128, stride 4  ->  17 anchors/traj  x 16 test traj =  272
+  #     h_max =  64, stride 4  ->  33               x 16           =  528
+  # Unlike Lifted H2 this is a real sample, because there are many trajectories
+  # rather than one. But h > 128 does not exist here and must never appear in
+  # eval_horizons.
+  # These assume traj_cut = 0 and are the values the FAILED first run used.
+  # After setting traj_cut to what the probe reports (call it Tc), the usable
+  # record is 200 - Tc and the anchor window is [3, 199 - Tc - h_max). Keep
+  # max(eval_horizons) below about (200 - Tc - 4) / 2 so anchors still span
+  # the developed-convection part of the record rather than piling into its
+  # head. For Tc ~ 60 that means h_max_train 32 and eval to 64, not 128.
+  horizon_sampling: log_binned
+  h_max_train: 64
+  horizon_bins: [[1, 2], [3, 4], [5, 8], [9, 16], [17, 32], [33, 64]]
+  eval_horizons: [1, 2, 4, 8, 12, 16, 24, 32, 48, 64] #, 96, 128]
+  val_horizons: [1, 4, 16, 64]
+  eval_stride: 4
+  hval_stride: 16
+  climatology_stride: 4
+
+  samples_per_epoch: 20000
+  val_samples: 2000
+  batch_size: 32
+  batch_size_eval: 32
+  num_workers: 6
+
+  spectral_axes_note: chebyshev_z   # delete if using rayleigh_benard_uniform
+
+model:
+  # Periodic in x, walls in z. models/fno.py pads both axes with one width and
+  # one mode, so "periodic in x, replicate in z" is not expressible. Replicate
+  # is correct for z and mildly wasteful in x -- the same compromise the burner
+  # geometry already makes, applied identically to all three models.
+  padding: 8
+  padding_mode: replicate
+  modes1: 16
+  modes2: 16
+  width: 64
+  n_layers: 4
+
+training:
+  max_epochs: 120
+  use_semigroup: false
+  use_identity: false
+
+experiment:
+  exp_name: rb_dt_fno
+  save_dir: ./checkpoints/rb_dt_fno
+  tb_dir: ./runs/rb_dt_fno
+  results_dir: ./results

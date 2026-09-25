@@ -1,0 +1,24 @@
+# Optional third dataset if time permits. Rayleigh-Benard only trains to h=64,
+# so R=32 is already half of the direct model's maximum supervised horizon.
+_base_: ../rayleigh_benard.yaml
+
+meta:
+  model_variant: ar_fno_r
+  model_name: ar_fno
+
+data:
+  ar_rollout: 4
+  ar_random_rollout: false
+  horizon_sampling: fixed
+  fixed_horizon: 1
+  batch_size: 4
+  batch_size_eval: 8
+
+training:
+  ar_step_weights: uniform
+
+experiment:
+  exp_name: rollout_depth_rb_R4
+  save_dir: ./checkpoints/rollout_depth_rb_R4
+  tb_dir: ./runs/rollout_depth_rb_R4
+  results_dir: ./results

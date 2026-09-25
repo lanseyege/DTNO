@@ -1,0 +1,130 @@
+# Phase 5 — BLASTNet Lifted Hydrogen Jet Flame (Sharma et al. 2024).
+#
+# Substituted for REALM as the cross-dataset check. §5 proposed REALM IgnitHIT,
+# but its 2D sets top out at 30/40/50 timesteps, which cannot test the thing
+# this project is about: with K = 4 history frames a 30-frame trajectory admits
+# horizons up to ~25, and the interesting regime on RealPDEBench turned out to
+# sit below h = 16 anyway. 201 frames is the shortest length that still leaves a
+# usable horizon axis. §6's ordering (RealPDEBench -> REALM -> BLASTNet) is
+# preserved in spirit; only the middle step is skipped, and for a stated reason.
+#
+# WHAT THIS DATASET CAN AND CANNOT ANSWER
+#
+# Can: does the AR-vs-direct crossover reproduce on different physics
+# (H2/air lifted jet vs NH3/CH4 swirl burner), different geometry (160 x 200
+# anisotropic vs 128 x 128), and a different generalization axis (held-out
+# Reynolds number vs held-out fuel composition)?
+#
+# Cannot: give error bars over trajectories. There are 8 cases and the designed
+# test is a single interpolated Re = 7500. One test trajectory means one flow
+# realization; every E(h) curve here is a sample of size one. Treat the numbers
+# as a trend check, not as a measurement, unless you run the leave-one-Re-out
+# protocol (8 trainings) that would give a real distribution.
+#
+# THE QUESTION WORTH ASKING HERE, now that dt is known
+#
+#                          dt        T      total duration
+#   RealPDEBench      2.5e-4 s     2001         500.2 ms
+#   Lifted H2         5.0e-6 s      181           0.905 ms
+#
+# Sampling is 50x finer and the trajectories are 553x shorter in physical time.
+# The consequence is sharp: RealPDEBench's measured predictability horizon was
+# 4-6 frames = 1.0-1.5 ms, which is LONGER than an entire Lifted H2 trajectory.
+#
+# So this is not a re-run of the same experiment at a different scale, it is a
+# test of whether T_pred is a physical quantity at all:
+#
+#   If T_pred ~ 1 ms is set by the flow, the whole horizon axis here (h = 128 is
+#   640 us) sits INSIDE the predictable regime. Expect E(h) to keep rising
+#   monotonically with no saturation, the climatology baselines to be far above
+#   the operator everywhere, and the AR-vs-direct crossover to move to larger h
+#   because AR has less error to accumulate per step.
+#
+#   If instead E(h) saturates here too, around the same NUMBER of frames,
+#   then the horizon limit is a property of the model or the K-frame history,
+#   not of the physics -- which would be the more important finding, and would
+#   redirect the whole research programme.
+#
+# Either outcome is worth having, and the two are distinguishable from one plot.
+# Report T_pred in MILLISECONDS on both datasets, never in frames.
+
+_base_: base.yaml
+
+meta:
+  dataset_name: lifted_h2
+  model_name: dt_fno
+
+data:
+  backend: npy
+  data_path: /mnt/sdb/yuanye/datasets/lifted_h2_npy   # scripts/convert_lifted_h2.py
+  dt: 5.0e-6
+  file_pattern: "*.npy"
+
+  channels: null              # all five: UX, UY, T, YH2O, YOH
+  channel_transforms: {}      # let the audit decide; see the note below
+  history_len: 4
+
+  split_path: artifacts/split_lifted_h2.json
+  norm_stats_path: artifacts/norm_stats_lifted_h2.json
+  # 8 cases. 1 val + 1 test keeps 6 for training; both held-out cases are then
+  # a single Re, which is the honest limit of this dataset.
+  #
+  # DO NOT let the split be drawn at random here. Re = 7500 is the case the
+  # dataset was built to hold out -- it is interpolated between two training
+  # Reynolds numbers, which is the generalization claim this dataset supports.
+  # scripts/convert_lifted_h2.py writes the split directly with
+  # --test_re / --val_re; the seeded shuffle would land on it only by luck.
+  n_val_traj: 1
+  n_test_traj: 1
+  split_seed: 42
+
+  # ANCHOR BUDGET. Every horizon shares one anchor set (all of them must fit
+  # inside the trajectory), so the longest horizon sets how many anchors exist:
+  #
+  #     T = 151, K = 4        anchors = len(range(3, 151-h, stride))
+  #       h_max=128 stride=2  ->  10 anchors   <- first run; far too few
+  #       h_max=128 stride=1  ->  20
+  #       h_max= 64 stride=1  ->  84
+  #       h_max= 32 stride=1  -> 116
+  #
+  # With ONE test trajectory these are the whole sample. The first run scored
+  # h = 128 on ten anchors, which is why its curve bends back down at h = 96 and
+  # 128 -- that is sampling noise, not physics. Capping at 64 and taking every
+  # frame trades an unusable long-horizon column for a usable rest of the curve.
+  #
+  # 64 frames = 320 us here, still well inside anything the flow can be expected
+  # to remember, so nothing scientific is lost by the cap.
+  horizon_sampling: log_binned
+  h_max_train: 64
+  horizon_bins: [[1, 2], [3, 4], [5, 8], [9, 16], [17, 32], [33, 64]]
+  eval_horizons: [1, 2, 4, 8, 12, 16, 24, 32, 48, 64]
+  val_horizons: [1, 4, 16, 64]
+  eval_stride: 1
+  hval_stride: 4
+
+  samples_per_epoch: 12000
+  val_samples: 1500
+  batch_size: 8
+  batch_size_eval: 8
+  num_workers: 4
+
+model:
+  # 160 x 200, anisotropic. Nyquist is 81 streamwise and 101 transverse; the
+  # user's own FNO config uses 16/20, keeping more modes transverse because the
+  # jet's spreading layer carries finer structure there. Same choice here.
+  modes1: 16
+  modes2: 20
+  width: 64
+  n_layers: 4
+  padding: 8                  # a jet is non-periodic in both directions
+
+training:
+  max_epochs: 150
+  use_semigroup: false
+  use_identity: false
+
+experiment:
+  exp_name: lifted_h2_dt_fno
+  save_dir: ./checkpoints/lifted_h2_dt_fno
+  tb_dir: ./runs/lifted_h2_dt_fno
+  results_dir: ./results

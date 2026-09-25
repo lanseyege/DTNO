@@ -1,0 +1,59 @@
+# ==========================================================================
+# Experiment A — RQ3 on Rayleigh-Bénard. THE MECHANISM TEST.
+#
+# Read configs/expA_leadtime_gray_scott.yaml first for the protocol.
+#
+# WHAT THIS RUN IS FOR
+# The sparse-tau experiment produced a dataset-dependent result: lead-time
+# interpolation succeeds on Gray-Scott (mean ratio 1.24, no unseen horizon
+# above 2x its interpolant) and fails completely on Cylinder (3.62, all ten
+# unseen horizons above 2x, with a 3.4x cliff at the trained h=64).
+#
+# The proposed mechanism is advection. For a convecting flow the state at t+h
+# is approximately the state at t transported by U*h*dt, and interpolating
+# between two different transports does not give the intermediate transport.
+# Gray-Scott has no advection -- that is its role on the ladder -- and it is
+# the one that interpolates. Cylinder's shedding period is 174.5 frames and
+# the trained gaps 16->64 and 64->128 span 0.27 and 0.37 of a period.
+#
+# That is currently a story fitted to two points. Rayleigh-Bénard is the
+# cheapest way to make it a prediction: buoyancy-driven plumes advect, so
+# **this run should FAIL to interpolate**. If it interpolates cleanly, the
+# mechanism is wrong and the honest write-up is "dataset-dependent, cause
+# unknown" -- which is a weaker paper but a true one.
+#
+# Rayleigh-Bénard is the cheapest candidate because its horizon grid is short
+# (T = 200 minus the spin-up cut), so one training run answers it.
+#
+# BEFORE RUNNING
+# Copy `traj_cut` and `h_max_train` from your corrected configs/rayleigh_benard.yaml.
+# This file inherits them, so if that file is right this one is too -- but the
+# TRAIN HORIZONS below must be a strict subset of eval_horizons and must not
+# exceed h_max_train, and they are written for h_max_train = 64.
+# ==========================================================================
+
+_base_: rayleigh_benard.yaml
+
+meta:
+  model_name: dt_fno
+  model_variant: dt_fno
+
+data:
+  horizon_sampling: explicit
+  # Five anchors over [1, 64], the same shape as the Gray-Scott and Cylinder
+  # arms so the roughness statistic is comparable across all three. Gaps of
+  # 4->16 and 16->48 are where the interpolation is actually tested.
+  train_horizons: [1, 4, 16, 48, 64]
+  h_max_train: 64
+  eval_horizons: [1, 2, 3, 4, 6, 8, 10, 12, 16, 24, 32, 48, 64]
+  val_horizons: [1, 4, 16, 48]
+  eval_stride: 4
+
+training:
+  use_semigroup: false
+  use_identity: false
+
+experiment:
+  exp_name: rb_leadtime_dt_fno
+  save_dir: ./checkpoints/rb_leadtime_dt_fno
+  tb_dir: ./runs/rb_leadtime_dt_fno

@@ -1,0 +1,20 @@
+# Experiment B (§21) — semigroup arm.
+#
+# This is where the semigroup constraint should pay off if it pays off anywhere:
+# composition ties Phi at unseen intervals to Phi at trained ones, so h = 12
+# is reachable as Phi_8 . Phi_4 even though 12 was never a training horizon.
+_base_: expB_dt_fno.yaml
+
+meta:
+  model_name: sg_dt_fno
+
+training:
+  use_semigroup: true
+  use_identity: true
+  lambda_sg: 0.1
+  lambda_id: 0.05
+
+experiment:
+  exp_name: expB_sg_dt_fno
+  save_dir: ./checkpoints/expB_sg_dt_fno
+  tb_dir: ./runs/expB_sg_dt_fno

@@ -1,0 +1,26 @@
+# AR-FNO-R (Model A, strong arm, §23) — short-rollout training, r ~ U{1..4}.
+#
+# Costs ~R forward passes per sample. This is the baseline the paper has to beat.
+_base_: base.yaml
+
+meta:
+  model_variant: ar_fno_r
+  model_name: ar_fno
+
+data:
+  ar_rollout: 4
+  ar_random_rollout: true
+  horizon_sampling: fixed
+  fixed_horizon: 1
+  # A 4-step window costs 4x the target frames per sample; keep the step count
+  # comparable to the other models rather than the sample count.
+  samples_per_epoch: 20000
+  batch_size: 6
+
+training:
+  ar_step_weights: uniform      # 'decay' protects one-step accuracy
+
+experiment:
+  exp_name: ar_fno_r
+  save_dir: ./checkpoints/ar_fno_r
+  tb_dir: ./runs/ar_fno_r

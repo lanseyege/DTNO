@@ -1,0 +1,2 @@
+CUDA_VISIBLE_DEVICES=2,3 NPROC=2 MASTER_PORT=29501 BLOCK=a2 bash run/11_model_fixes.sh
+

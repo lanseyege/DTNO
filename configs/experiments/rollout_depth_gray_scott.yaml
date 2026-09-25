@@ -1,0 +1,28 @@
+# ICLR 2027 revision: fixed-depth AR rollout sweep on Gray-Scott.
+#
+# The run script overrides data.ar_rollout with R in {1,4,8,16,32}.  Crucially,
+# ar_random_rollout is false: each arm backpropagates through exactly R model
+# applications, so the x-axis really is computational graph depth.
+_base_: ../gray_scott.yaml
+
+meta:
+  model_variant: ar_fno_r
+  model_name: ar_fno
+
+data:
+  ar_rollout: 4
+  ar_random_rollout: false
+  horizon_sampling: fixed
+  fixed_horizon: 1
+  # Hold micro-batch fixed across R. Override from the shell if R=32 OOMs.
+  batch_size: 4
+  batch_size_eval: 8
+
+training:
+  ar_step_weights: uniform
+
+experiment:
+  exp_name: rollout_depth_gs_R4
+  save_dir: ./checkpoints/rollout_depth_gs_R4
+  tb_dir: ./runs/rollout_depth_gs_R4
+  results_dir: ./results

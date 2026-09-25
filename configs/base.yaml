@@ -1,0 +1,192 @@
+# ==========================================================================
+# Base configuration — RealPDEBench combustion (numerical branch).
+#
+# Everything shared by the three models lives here so that AR-FNO, DT-FNO and
+# SG-DT-FNO differ ONLY in what their own config overrides.  §3 asks for a
+# matched parameter budget and an otherwise identical setup; this file is how
+# that is enforced rather than asserted.
+#
+# Nothing here is a guess about your data layout except `data_path`.  Run
+#     python scripts/audit_data.py --config configs/dt_fno.yaml
+# first: it verifies (T, H, W, C) = (2001, 128, 128, 15), prints every channel
+# name with the group and transform it was assigned, and writes the frozen
+# split + normalisation statistics that training refuses to run without.
+# ==========================================================================
+
+meta:
+  dataset_name: realpde_combustion
+  model_name: dt_fno
+
+data:
+  backend: zarr
+  data_path: /mnt/sdb/yuanye/datasets/realpdebench_combustion_t4.zarr
+  dt: 2.5e-4                    # seconds per frame; makes tau physical
+
+  # Explicit channel set. `null` would take all 15, which is wrong here:
+  # the audit's redundancy check (step [2b]) finds two channels that are exact
+  # functions of others, and a duplicated quantity gets double weight in the
+  # loss AND in the channel-averaged E_field of §25, plus it dilutes its group
+  # in §26.
+  #
+  #   Pressure           = Absolute_Pressure - 101325   (r = 1.000000)
+  #                        a z-score erases the offset, so after normalisation
+  #                        these are literally the same field. Keep one.
+  #   Velocity_Magnitude ~ sqrt(u^2 + v^2 + w^2) to 2.45% relative error
+  #                        (measured by step [2b]). Not an exact identity, so it
+  #                        is not formally redundant -- but 97.5% of it is
+  #                        reconstructible from channels already in the set, and
+  #                        keeping it would give velocity 4 of 14 slots in the
+  #                        channel-averaged E_field of §25.
+  #                        The 2.45% is very likely resampling, not physics:
+  #                        |resample(u)| != resample(|u|) because the modulus is
+  #                        nonlinear, and the residual should then concentrate at
+  #                        steep gradients. That also explains the -9.025
+  #                        minimum, since a true modulus cannot be negative.
+  #                        Dropped on that basis. If you want it back, add it
+  #                        below and check where the 2.45% lives before drawing
+  #                        conclusions from it.
+  #
+  # 15 -> 13. Re-add either name below to overrule.
+  channels:
+    - Absolute_Pressure
+    - Chemistry_Heat_Release_Rate
+    - Mole_Fraction_of_CH4
+    - Mole_Fraction_of_CO
+    - Mole_Fraction_of_CO2
+    - Mole_Fraction_of_H2O
+    - Mole_Fraction_of_NH2
+    - Mole_Fraction_of_NH3
+    - Mole_Fraction_of_OH
+    - Temperature
+    - Velocity[i]
+    - Velocity[j]
+    - Velocity[k]
+
+  # Explicit per-channel transforms (§11), overriding the audit heuristic.
+  #
+  # Everything is z-score. Reasons, all measured rather than assumed:
+  #   * log and Box-Cox are OFF THE TABLE for this data regardless of what §11.3
+  #     and REALM's pipeline suggest: resampling onto the 128x128 grid produces
+  #     Gibbs undershoot at steep fronts, so mole fractions run to -6.0e-2
+  #     (CH4, 34.8% negative) and temperature to -94 K. log is undefined there.
+  #   * z-score guarantees unit pooled variance per channel, so no channel can
+  #     be crushed by a badly chosen transform scale.
+  #   * symlog on the species is a real alternative, not a mistake -- but its
+  #     scale parameter is a trade-off (see build_stat in scripts/audit_data.py
+  #     for the measured comparison), and §18/§35 say the first phase should not
+  #     carry components whose contribution cannot be attributed. Make it an
+  #     explicit ablation later, not a silent default now.
+  #
+  # Heat release is the one channel where symlog is worth considering first: it
+  # is signed (17.4% negative) and spans -1.95e9 to 7.07e9. Try both and let the
+  # §24 validation decide; that is a one-line change and a clean ablation.
+  channel_transforms:
+    Absolute_Pressure: zscore
+    Chemistry_Heat_Release_Rate: zscore
+    Mole_Fraction_of_CH4: zscore
+    Mole_Fraction_of_CO: zscore
+    Mole_Fraction_of_CO2: zscore
+    Mole_Fraction_of_H2O: zscore
+    Mole_Fraction_of_NH2: zscore
+    Mole_Fraction_of_NH3: zscore
+    Mole_Fraction_of_OH: zscore
+    Temperature: zscore
+    Velocity[i]: zscore
+    Velocity[j]: zscore
+    Velocity[k]: zscore
+
+  # `s` in symlog / log1p = this quantile of |x|. Only used for channels whose
+  # transform is symlog or log1p. See build_stat for why 0.5 is the default.
+  symlog_scale_quantile: 0.5
+
+  history_len: 4                # K, §10
+  t_scale: null                 # null => h_max_train * dt, so tau = 1 at the
+                                # longest training horizon and extrapolation is
+                                # literally tau > 1
+
+  # ---- split (§9): trajectory-held-out, 20 / 5 / 5, frozen to JSON ----
+  split_path: artifacts/split_realpde.json
+  norm_stats_path: artifacts/norm_stats.json
+  n_val_traj: 5
+  n_test_traj: 5
+  split_seed: 42
+
+  # ---- horizon sampling (§20) ----
+  horizon_sampling: log_binned
+  h_max_train: 128
+  horizon_bins: [[1, 2], [3, 4], [5, 8], [9, 16], [17, 32], [33, 64], [65, 128]]
+
+  # ---- evaluation grid (§20); h > 128 is horizon extrapolation ----
+  eval_horizons: [1, 2, 4, 8, 16, 32, 64, 128, 160, 192, 256, 384, 512]
+  eval_stride: 50               # anchor spacing inside a test trajectory
+  max_anchors_per_traj: null
+
+  # H_val for the §24 model-selection criterion.  Kept short and cheap: it runs
+  # every `hval_every` epochs and AR must roll out to max(H_val) each time.
+  val_horizons: [1, 4, 16, 64, 128]
+  hval_stride: 200
+  hval_every: 5
+  hval_max_batches: null
+
+  samples_per_epoch: 20000      # online pairs per epoch (§8)
+  val_samples: 2000
+  batch_size: 64                 # per GPU
+  batch_size_eval: 64
+  num_workers: 4
+
+model:
+  width: 64                     # d, §12.1
+  modes1: 16                    # §15
+  modes2: 16
+  n_layers: 4
+  decoder_hidden: 128
+  encoder_kernel: 1             # 3 lets the lift see spatial tendency structure
+  padding: 8                    # non-periodic burner: pad then crop (§15)
+  padding_mode: replicate
+  act: gelu
+  block_norm: false
+
+  # Documented deviations from the literal §15 block, applied to ALL THREE
+  # models identically so they cannot confound the AR-vs-direct comparison.
+  # Set residual=false and predict_delta=false to recover the proposal exactly.
+  residual: true
+  layer_scale: 0.1
+  predict_delta: true
+
+  # time conditioning (§13.1, §14) — ignored by ar_fno
+  time_embed_dim: 128
+  time_bands: 8
+  time_embed_mode: fourier      # fourier | fourier_log | scalar
+  time_cond: film               # film | concat   (A3 ablation)
+
+training:
+  max_epochs: 100
+  lr: 1.0e-3                    # §24
+  weight_decay: 1.0e-4
+  betas: [0.9, 0.999]
+  warmup_steps: 500
+  accumulate_gradients: 1
+  max_grad_norm: 1.0
+  amp: true
+  amp_dtype: bf16               # SpectralConv2d casts to fp32 internally
+  pred_loss: nmse               # §18: optimise normalised MSE, log both forms
+
+  # semigroup (§16-17, §19) — ignored unless the model is sg_dt_fno
+  lambda_sg: 0.1
+  lambda_sg_init: 0.0
+  sg_warmup_epochs: 5
+  sg_ramp_epochs: 10
+  sg_split_mode: uniform        # uniform | log
+  sg_detach_direct: false
+  lambda_id: 0.05
+
+  log_interval: 100
+  save_every: 25
+  tensorboard: true
+
+experiment:
+  seed: 42
+  exp_name: base
+  save_dir: ./checkpoints/base
+  tb_dir: ./runs/base
+  results_dir: ./results
