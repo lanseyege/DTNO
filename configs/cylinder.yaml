@@ -65,7 +65,7 @@ meta:
 
 data:
   backend: arrow
-  data_path: /mnt/sdb/yuanye/datasets/realpdebench/cylinder/hf_dataset/numerical
+  data_path: /mnt/sdb/username/datasets/realpdebench/cylinder/hf_dataset/numerical
   dt: 2.5e-3                     # 400 Hz; cross-checked against the `t` column
 
   # `vo` (vorticity) is a function of u and v -- exactly the case the audit's
