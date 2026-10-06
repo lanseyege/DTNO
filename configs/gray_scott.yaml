@@ -28,7 +28,7 @@ meta:
 
 data:
   backend: well
-  data_path: /mnt/sdb/yuanye/datasets/the_well/gray_scott_reaction_diffusion
+  data_path: /mnt/sdb/username/datasets/the_well/gray_scott_reaction_diffusion
   file_pattern: "*.hdf5"
   # The store globs <root>/{train,valid,test}/ and <root>/data/{train,valid,test}/,
   # so both of The Well's shipped layouts resolve without editing this path.
