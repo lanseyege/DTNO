@@ -40,7 +40,7 @@ meta:
 
 data:
   backend: well
-  data_path: /mnt/sdb/yuanye/datasets/the_well/rayleigh_benard
+  data_path: /mnt/sdb/username/datasets/the_well/rayleigh_benard
   file_pattern: "*.hdf5"
   dt: null                       # from /dimensions/time
 
