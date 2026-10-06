@@ -56,7 +56,7 @@ meta:
 
 data:
   backend: npy
-  data_path: /mnt/sdb/yuanye/datasets/lifted_h2_npy   # scripts/convert_lifted_h2.py
+  data_path: /mnt/sdb/username/datasets/lifted_h2_npy   # scripts/convert_lifted_h2.py
   dt: 5.0e-6
   file_pattern: "*.npy"
 
