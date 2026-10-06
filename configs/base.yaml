@@ -19,7 +19,7 @@ meta:
 
 data:
   backend: zarr
-  data_path: /mnt/sdb/***/datasets/realpdebench_combustion_t4.zarr
+  data_path: /mnt/sdb/username/datasets/realpdebench_combustion_t4.zarr
   dt: 2.5e-4                    # seconds per frame; makes tau physical
 
   # Explicit channel set. `null` would take all 15, which is wrong here:
